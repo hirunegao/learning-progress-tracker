@@ -10,6 +10,9 @@ body{font-family:'Segoe UI','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;back
 .container{max-width:1200px;margin:0 auto}
 h1{text-align:center;color:#1a56db;margin-bottom:5px;font-size:26px}
 .subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:13px}
+.nav{text-align:center;margin-bottom:20px}
+.nav a{color:#1a56db;text-decoration:none;font-weight:600;font-size:14px;padding:8px 16px;border:2px solid #1a56db;border-radius:8px;transition:.2s}
+.nav a:hover{background:#1a56db;color:#fff}
 .staff-input{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:15px;align-items:flex-end}
 .staff-input label{font-weight:600;font-size:13px;color:#555;display:block;margin-bottom:4px}
 .staff-input input,.staff-input select{border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;width:200px}
@@ -39,7 +42,7 @@ h1{text-align:center;color:#1a56db;margin-bottom:5px;font-size:26px}
 .ch-row .date{margin-left:auto;font-size:11px;color:#888;min-width:90px;text-align:right}
 .arrow{transition:transform .3s}
 .arrow.open{transform:rotate(90deg)}
-@media print{.staff-input .btn,.btn-export,.btn-reset,.btn-print,.btn-save,.btn-load{display:none!important} body{padding:0} .course-body{display:block!important}}
+@media print{.staff-input .btn,.btn-export,.btn-reset,.btn-print,.btn-save,.btn-load,.nav{display:none!important} body{padding:0} .course-body{display:block!important}}
 @media(max-width:768px){.staff-input{flex-direction:column}.staff-input input,.staff-input select{width:100%}}
 </style>
 </head>
@@ -47,6 +50,7 @@ h1{text-align:center;color:#1a56db;margin-bottom:5px;font-size:26px}
 <div class="container">
 <h1>📋 スタッフ学習進捗票</h1>
 <p class="subtitle">DMM 生成AI CAMP — learningBOX 全8コース対応</p>
+<div class="nav"><a href="dashboard.html">📊 スタッフ進捗一覧へ</a></div>
 <div class="staff-input">
 <div><label>スタッフ氏名</label><input id="staffName" value="梶原則夫"></div>
 <div><label>部署</label><input id="dept" placeholder="例：営業部"></div>
@@ -197,7 +201,6 @@ function updateSummary(){
     h+='<div class="summary-card"><div class="num" style="color:'+colors[ci%8]+'">'+cp+'%<'+'/div><div class="label">'+c.name.substring(0,10)+'<'+'/div><div class="pbar-bg"><div class="pbar-fill" style="width:'+cp+'%;background:'+colors[ci%8]+'"><'+'/div><'+'/div><'+'/div>';
   });
   document.getElementById('summaryArea').innerHTML=h;
-  // update course badges
   courses.forEach(function(c,ci){
     var badge=document.getElementById('badge_'+ci);
     if(badge){
