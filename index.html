@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スタッフ学習進捗票 - DMM生成AI CAMP</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;background:#f0f4f8;color:#333;padding:20px}
+.container{max-width:1200px;margin:0 auto}
+h1{text-align:center;color:#1a56db;margin-bottom:5px;font-size:26px}
+.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:13px}
+.staff-input{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:15px;align-items:flex-end}
+.staff-input label{font-weight:600;font-size:13px;color:#555;display:block;margin-bottom:4px}
+.staff-input input,.staff-input select{border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;width:200px}
+.staff-input input:focus,.staff-input select:focus{outline:none;border-color:#1a56db;box-shadow:0 0 0 3px rgba(26,86,219,.15)}
+.btn{background:#1a56db;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;cursor:pointer;font-weight:600;transition:.2s}
+.btn:hover{background:#1544b0}
+.btn-export{background:#059669}.btn-export:hover{background:#047857}
+.btn-reset{background:#dc2626}.btn-reset:hover{background:#b91c1c}
+.btn-print{background:#7c3aed}.btn-print:hover{background:#6d28d9}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.summary-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:16px;text-align:center}
+.summary-card .num{font-size:28px;font-weight:700;color:#1a56db}
+.summary-card .label{font-size:11px;color:#888;margin-top:4px}
+.pbar-bg{background:#e5e7eb;border-radius:999px;height:10px;overflow:hidden;margin-top:6px}
+.pbar-fill{height:100%;border-radius:999px;transition:width .5s ease}
+.course-section{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px;overflow:hidden}
+.course-header{background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff;padding:12px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.course-header h3{font-size:15px;font-weight:600}
+.course-header .badge{background:rgba(255,255,255,.25);padding:2px 10px;border-radius:999px;font-size:12px;margin-left:10px}
+.course-header .arrow{transition:transform .3s;font-size:16px}
+.course-header.collapsed .arrow{transform:rotate(-90deg)}
+.course-body{padding:0 18px 16px;display:none}
+.course-body.open{display:block}
+.lesson-group{margin-top:10px}
+.lesson-title{background:#eef2ff;padding:7px 12px;border-radius:8px;font-weight:600;font-size:13px;color:#1a56db;margin-bottom:4px;display:flex;justify-content:space-between}
+.lesson-progress{font-size:11px;color:#666;font-weight:400}
+.ch-row{display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid #f3f3f3;font-size:12.5px;transition:background .15s}
+.ch-row:hover{background:#f8fafc}
+.ch-row:last-child{border-bottom:none}
+.ch-row input[type=checkbox]{width:16px;height:16px;margin-right:8px;accent-color:#1a56db;cursor:pointer}
+.ch-row .ch-name{flex:1}
+.ch-row .ch-date{color:#aaa;font-size:10.5px;border:1px solid #eee;border-radius:6px;padding:3px 6px;width:110px;text-align:right}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+@media print{.staff-input,.actions,.btn,.no-print{display:none!important}.course-body{display:block!important}body{background:#fff;padding:10px}.course-section{box-shadow:none;border:1px solid #ddd;break-inside:avoid}}
+@media(max-width:768px){.staff-input{flex-direction:column}.staff-input input,.staff-input select{width:100%}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📋 スタッフ学習進捗票</h1>
+<p class="subtitle">DMM 生成AI CAMP — learningBOX 全8コース対応</p>
+<div class="staff-input">
+<div><label>スタッフ氏名</label><input type="text" id="staffName" placeholder="例：山田太郎"></div>
+<div><label>部署</label><input type="text" id="dept" placeholder="例：営業部"></div>
+<div><label>受講開始日</label><input type="date" id="startDate"></div>
+<div><label>対象コース</label><select id="courseFilter"><option value="all">すべて表示</option></select></div>
+</div>
+<div class="actions no-print">
+<button class="btn btn-export" onclick="exportCSV()">📊 CSV出力</button>
+<button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+<button class="btn btn-reset" onclick="resetAll()">🔄 全リセット</button>
+<button class="btn" onclick="saveData()">💾 保存</button>
+<button class="btn" onclick="loadData()" style="background:#f59e0b">📂 読込</button>
+</div>
+<div class="summary" id="summaryArea"></div>
+<div id="courseArea"></div>
+</div><script>
+const courses=[
+{name:"PE-基礎マスターコース",contents:49,lessons:[
+{name:"Lesson0 事前準備",chapters:["Ch1 本コースについて","Ch2 学習システムlearning BOXについて","Ch3 zipファイルの展開方法","Ch4 課題提出・AIチューターの使い方","Ch5 学習の進め方","Ch6 ショートカットキー"]},
+{name:"Lesson1 ChatGPTについて",chapters:["Ch1 ChatGPTの使い方","Ch2 ［提出課題］ChatGPT操作をしよう"]},
+{name:"Lesson2 生成AIの基礎知識",chapters:["Ch1 Lessonのゴール","Ch2 生成AIとは何か","Ch3 生成AIが与えた影響","Ch4 ChatGPTが向いている・向いていない作業","Ch5 生成AI利用時の注意事項","Ch6 ［提出課題①］テキスト生成AIの出力を体験","Ch7 ［提出課題②］ChatGPTで解決したいことを考える"]},
+{name:"Lesson3 PE入門",chapters:["Ch1 Lessonのゴール","Ch2 PEの重要性","Ch3 PEのテクニック","Ch4 プロンプト作成時の注意点","Ch5 ［提出課題］プロンプトを修正しよう"]},
+{name:"Lesson4 PE技法 基本編",chapters:["Ch1 Lessonのゴール","Ch2 プロンプトは構造化が鍵","Ch3 ［提出課題①］構造化プロンプトを作成","Ch4 指定の出力フォーマットで回答させよう","Ch5 ［提出課題②］指定フォーマットで回答させる"]},
+{name:"Lesson5 PE技法 応用編",chapters:["Ch1 Lessonのゴール","Ch2 得られた結果を改善しよう","Ch3 ［提出課題①］プロンプトを改善しよう","Ch4 プロンプトのテクニック","Ch5 ［提出課題②］テクニックでプロンプト作成","Ch6 様々な出力形式","Ch7 便利な拡張機能","Ch8 ［提出課題③］GPTsを試す"]},
+{name:"Lesson6 PEの収益化",chapters:["Ch1 Lessonのゴール","Ch2 プロンプトの販売","Ch3 GPT Storeの収益化","Ch4 売れるプロンプトをつくる方法","Ch5 ［提出課題］売れるプロンプトを作成"]},
+{name:"Lesson7 生成AI実務活用演習",chapters:["Ch1 Lessonのゴール","Ch2 ［演習①］文章の修正","Ch3 ［演習②］議事録を作成","Ch4 ［演習③］英語メールのやり取り","Ch5 ［演習④］契約書を作成","Ch6 ［演習⑤］コールセンター立ち上げ","Ch7 ［演習⑥］プログラミング","Ch8 ［演習⑦］アプリを作成","Ch9 ［演習⑧］チャットボットを作成","Ch10 ［演習⑨］アイディアを出す"]},
+{name:"Lesson8 まとめ",chapters:["Ch1 最後に"]}]},
+{name:"PE-マーケティングコース",contents:43,lessons:[
+{name:"Lesson0 はじめに",chapters:["Ch1 本コースについて","Ch2 learning BOXについて","Ch3 zipファイルの展開方法","Ch4 課題提出・AIチューターの使い方","Ch5 学習の進め方","Ch6 ショートカットキー","Ch7 生成AIの基礎知識"]},
+{name:"Lesson1 外部環境を把握する",chapters:["Ch1 Lessonのゴール","Ch2 PEST分析で外部環境を把握","Ch3 生成AIで外的要因を把握","Ch4 ［提出課題］外的要因把握"]},
+{name:"Lesson2 市場を理解する",chapters:["Ch1 Lessonのゴール","Ch2 市場理解の進め方","Ch3 生成AIで市場を理解","Ch4 ［提出課題］市場を理解"]},
+{name:"Lesson3 ターゲットを定める",chapters:["Ch1 Lessonのゴール","Ch2 ターゲット検討の進め方","Ch3 生成AIでターゲットを定める","Ch4 ［提出課題］ターゲットを定める"]},
+{name:"Lesson4 バリュープロポジション",chapters:["Ch1 Lessonのゴール","Ch2 バリュープロポジション検討","Ch3 生成AIでバリュープロポジション","Ch4 ［提出課題］バリュープロポジション"]},
+{name:"Lesson5 プロダクト要件",chapters:["Ch1 Lessonのゴール","Ch2 プロダクト要件の検討","Ch3 生成AIでプロダクト要件を決める","Ch4 ［提出課題］プロダクト要件"]},
+{name:"Lesson6 KPIツリーを設計する",chapters:["Ch1 Lessonのゴール","Ch2 KPI策定の進め方","Ch3 生成AIでKPIツリー設計","Ch4 ［提出課題］KPIツリー設計"]},
+{name:"Lesson7 集客施策を実施する",chapters:["Ch1 Lessonのゴール","Ch2 集客施策とは","Ch3 LP制作","Ch4 ［演習①］LP制作","Ch5 Web広告配信の計画","Ch6 ［演習②］Web広告配信","Ch7 広告文を作成","Ch8 ［演習③］広告文作成","Ch9 SEO対策","Ch10 ［演習④］SEO対策","Ch11 メルマガ配信","Ch12 ［演習⑤］メルマガ配信"]}]},
+{name:"PE-営業コース",contents:31,lessons:[
+{name:"Lesson0 はじめに",chapters:["Ch1 本コースについて","Ch2 learning BOXについて","Ch3 zipファイルの展開方法","Ch4 課題提出・AIチューターの使い方","Ch5 学習の進め方","Ch6 ショートカットキー","Ch7 生成AIの基礎知識"]},
+{name:"Lesson1 リード顧客を獲得する",chapters:["Ch1 Lessonのゴール","Ch2 リード顧客獲得の進め方","Ch3 生成AIでリード顧客獲得","Ch4 ［提出課題］リード顧客獲得"]},
+{name:"Lesson2 商談を獲得する",chapters:["Ch1 Lessonのゴール","Ch2 商談獲得の進め方","Ch3 生成AIで商談獲得","Ch4 ［提出課題］商談獲得"]},
+{name:"Lesson3 受注を獲得する",chapters:["Ch1 Lessonのゴール","Ch2 受注獲得の進め方","Ch3 生成AIで受注獲得","Ch4 ［提出課題］受注獲得"]},
+{name:"Lesson4 継続利用を促す",chapters:["Ch1 Lessonのゴール","Ch2 継続利用の促し方","Ch3 生成AIで継続利用を促す","Ch4 ［提出課題］継続利用"]},
+{name:"Lesson5 営業行動を改善する",chapters:["Ch1 Lessonのゴール","Ch2 営業行動の振り返り方","Ch3 生成AIで営業行動改善","Ch4 ［提出課題］営業行動改善"]},
+{name:"Lesson6 社内で報告する",chapters:["Ch1 Lessonのゴール","Ch2 社内報告の進め方","Ch3 生成AIで社内報告","Ch4 ［提出課題］社内報告"]}]},
+{name:"PE-人事コース",contents:44,lessons:[
+{name:"Lesson0 はじめに",chapters:["Ch1 本コースについて","Ch2 learning BOXについて","Ch3 zipファイルの展開方法","Ch4 課題提出・AIチューターの使い方","Ch5 学習の進め方","Ch6 ショートカットキー","Ch7 生成AIの基礎知識"]},
+{name:"Lesson1 セキュリティ/ガバナンス",chapters:["Ch1 概要・ゴール","Ch2 注意点と対策","Ch3 機密情報漏洩防止のAI活用テクニック"]},
+{name:"Lesson2 候補者募集の準備",chapters:["Ch1 概要・ゴール","Ch2 採用ピッチ資料の概要","Ch3 生成AIで採用ピッチ資料作成","Ch4 要素を追加","Ch5 ［提出課題］採用ピッチ資料"]},
+{name:"Lesson3 候補者を募集する",chapters:["Ch1 概要・ゴール","Ch2 ジョブディスクリプションの概要","Ch3 生成AIでJD作成","Ch4 【提出課題①】JD作成","Ch5 スカウト返信率の基本知識","Ch6 生成AIでスカウト文面作成","Ch7 【提出課題②】スカウト文面最適化"]},
+{name:"Lesson4 候補者を選考する",chapters:["Ch1 概要・ゴール","Ch2 生成AIで書類選考自動化","Ch3 ［提出課題①］書類選考自動化","Ch4 生成AIで面接選考効率化","Ch5 ［提出課題②］面接選考効率化"]},
+{name:"Lesson5 人材開発の仕組み",chapters:["Ch1 概要・ゴール","Ch2 オンボーディングAI活用","Ch3 ［提出課題①］オンボーディングチャットボット","Ch4 人事評価制度のAI活用","Ch5 ［提出課題②］人事評価制度"]},
+{name:"Lesson6 組織課題を把握して改善",chapters:["Ch1 概要・ゴール","Ch2 従業員アンケートの設計","Ch3 フォーム作成の自動化","Ch4 アンケート結果の分析","Ch5 ［提出課題］アンケート作成・分析"]},
+{name:"Lesson7 最終課題",chapters:["Ch1 概要・ゴール","Ch2 ［演習①］採用ピッチ資料","Ch3 ［演習②］JD作成","Ch4 ［演習③］書類選考自動化","Ch5 ［演習④］オンボーディング","Ch6 ［演習⑤］人事評価制度","Ch7 ［演習⑥］従業員サーベイ"]}]},
+{name:"生成AIエンジニアコース",contents:146,lessons:[
+{name:"Lesson0 事前準備",chapters:["Ch1 learning BOXについて","Ch2 zipファイルの展開方法","Ch3 課題提出・AIチューターの使い方","Ch4 学習の進め方","Ch5 ショートカットキー"]},
+{name:"Lesson1 LLM開発の前提知識",chapters:["Ch1 概要・ゴール","Ch2 生成AIの概要","Ch3 生成AIが及ぼした影響","Ch4 LLMについて","Ch5 ChatGPTの概要","Ch6 【提出課題】基本的な回答生成","Ch7 テキスト生成以外のAIツール","Ch8 注意事項","Ch9 主要テーマ"]},
+{name:"Lesson2 PE",chapters:["Ch1 概要・ゴール","Ch2 PE入門","Ch3 PE基本","Ch4 PE応用"]},
+{name:"Lesson3 PE実務演習",chapters:["Ch1 【課題①】文章修正","Ch2 【課題②】議事録","Ch3 【課題③】英語メール","Ch4 【課題④】契約書","Ch5 【課題⑤】コールセンター","Ch6 【課題⑥】アイデア"]},
+{name:"Lesson4 Google Colab",chapters:["Ch1 概要・ゴール","Ch2 Colabの概要","Ch3 コード実行準備","Ch4 基本操作","Ch5 【提出課題】基本操作","Ch6 無料プランの制約"]},
+{name:"Lesson5 Python基本文法",chapters:["Ch1 概要・ゴール","Ch2 Pythonの概要","Ch3 プログラム作成の基本","Ch4 データ構造","Ch5 エラー解決","Ch6 制御構造","Ch7 条件分岐","Ch8 繰り返し処理","Ch9 デバッグ","Ch10 関数","Ch11 メソッド","Ch12 例外処理","Ch13 ライブラリ","Ch14 クラス","Ch15 【提出課題】図書管理システム"]},
+{name:"Lesson6 OpenAI API",chapters:["Ch1 概要・ゴール","Ch2 APIの概要","Ch3 APIキー取得","Ch4 Chat Completions準備","Ch5 Chat Completions基本","Ch6 Chat Completions応用","Ch7 テキスト以外の生成","Ch8 【提出課題】会話履歴付きLLM","Ch9 （任意）MCP"]},
+{name:"Lesson7 LangChain概要",chapters:["Ch1 概要・ゴール","Ch2 LangChainの概要","Ch3 【提出課題】LangChainでできること"]},
+{name:"Lesson8-15 LangChainモジュール",chapters:["L8 Language models","L9 Prompts","L10 Output Parser","L11 Chains","L12 Memory","L13 Retrieval(RAG)","L14 Agents(AIエージェント)","L15 Callbacks"]},
+{name:"Lesson16 【中間課題】",chapters:["Ch1 RAGシステム開発","Ch2 AIエージェント機能搭載"]},
+{name:"Lesson17 LlamaIndex",chapters:["Ch1 概要・ゴール","Ch2 LlamaIndexの基本","Ch3 カスタマイズ方法","Ch4 LlamaHub","Ch5 【提出課題】複数データソースRAG"]},
+{name:"Lesson18 ファインチューニング",chapters:["Ch1 概要・ゴール","Ch2 FTの概要","Ch3 FTの方法","Ch4 【提出課題】キャラクター風AI"]},
+{name:"Lesson19-21 Webアプリ開発",chapters:["L19 VSCode・Python環境構築","L20 GitHub Copilot・Cursor","L21 Streamlit Webアプリ開発"]},
+{name:"Lesson22 生成AIの評価と改善",chapters:["Ch1 概要・ゴール","Ch2 改善・評価の前準備","Ch3 改善策の決め方","Ch4 具体的な改善手法","Ch5 LLM as a Judge","Ch6 システム全体の改善"]},
+{name:"Lesson23 【最終課題】LLMアプリ開発",chapters:["Ch1 概要・ゴール","Ch2 社内情報特化型検索アプリ"]}]},
+{name:"Difyマスターコース",contents:182,lessons:[
+{name:"Lesson0 事前準備",chapters:["Ch1 learning BOXについて","Ch2 zipファイルの展開方法","Ch3 課題提出・AIチューターの使い方","Ch4 学習の進め方","Ch5 ショートカットキー"]},
+{name:"Lesson1-4 基礎知識",chapters:["L1 Difyの概要","L2 生成AIアプリ開発の前提知識","L3 ChatGPT以外の生成AIツール","L4 プロンプトエンジニアリング"]},
+{name:"Lesson5-8 環境構築・基本",chapters:["L5 環境構築","L6 Difyの基本操作","L7 初期設定","L8 基礎知識"]},
+{name:"Lesson9 チャットボット作成",chapters:["Ch1 概要・ゴール","Ch2 チャットボットとは","Ch3 システムプロンプト","Ch4 変数","Ch5 基本的な作成方法","Ch6 ビジョン・オープナー","Ch7 モデレーション","Ch8 アノテーション","Ch9 公開方法","Ch10 ログ・統計情報","Ch11 【課題①】営業トーク練習Bot","Ch12 【課題②】子供向けBot"]},
+{name:"Lesson10-14 応用機能",chapters:["L10 パフォーマンス分析","L11 ナレッジ(RAG)","L12 テキストジェネレーター","L13 エージェント作成","L14 カスタムツール"]},
+{name:"Lesson15-18 ワークフロー",chapters:["L15 ワークフロー入門","L16 ワークフロー基本","L17 ワークフロー応用","L18 チャットフロー"]},
+{name:"Lesson19 【中間課題①】",chapters:["Ch1 顧客問い合わせ対応自動化"]},
+{name:"Lesson20-21 AIエージェント開発",chapters:["L20 AIエージェント開発入門","L21 AIエージェント開発実践"]},
+{name:"Lesson22 GASの基礎",chapters:["Ch1 概要・ゴール","Ch2 GASとは","Ch3 バイブコーディング","Ch4 変数","Ch5 データ型","Ch6 四則演算","Ch7 条件分岐","Ch8 反復処理","Ch9 JSON","Ch10 関数","Ch11 GAS標準関数","Ch12 Dify→スプレッドシート","Ch13 スプレッドシート→Dify","Ch14 トリガー設定","Ch15 中間課題②準備"]},
+{name:"Lesson23 【中間課題②】",chapters:["Ch1 社内問い合わせ自動化"]},
+{name:"Lesson24-25 セルフホスト版",chapters:["L24 Docker環境構築","L25 開発とデプロイ"]},
+{name:"Lesson26 実務活用/案件獲得",chapters:["Ch1 概要・ゴール","Ch2 業務フロー","Ch3 ヒアリングシート","Ch4 要件・仕様書","Ch5 見積もり","Ch6 提案資料","Ch7 バッドパターン"]},
+{name:"Lesson27 【最終課題】",chapters:["Ch1 履歴書スクリーニング","Ch2 提案書骨子作成","Ch3 競合リサーチ","Ch4 生成AI英会話"]},
+{name:"Lesson28 【自由課題】",chapters:["Ch1 オリジナル生成AIアプリ"]}]},
+{name:"生成AIデザインコース",contents:63,lessons:[
+{name:"Lesson0 事前準備",chapters:["Ch1 learning BOXについて","Ch2 zipファイルの展開方法","Ch3 課題提出・AIチューターの使い方","Ch4 学習の進め方","Ch5 ショートカットキー"]},
+{name:"Lesson1-3 基礎知識",chapters:["L1 生成AI×Webデザインの全体像","L2 Webデザインの基礎知識","L3 プロンプトエンジニアリング"]},
+{name:"Lesson4 画像素材制作",chapters:["Ch1 概要・ゴール","Ch2 Photoshop基礎","Ch3 Illustrator基礎","Ch4 生成AIによる画像生成","Ch5 ロゴ制作","Ch6 【提出課題】LP用画像素材"]},
+{name:"Lesson5 バナーデザイン",chapters:["Ch1 概要・ゴール","Ch2 バナーの基礎","Ch3 従来手法","Ch4 生成AI活用","Ch5 複数媒体","Ch6 評価と改善","Ch7 【提出課題】バナーセット"]},
+{name:"Lesson6 Webサイト企画",chapters:["Ch1 概要・ゴール","Ch2 全体像","Ch3 デスクリサーチ","Ch4 ヒアリング","Ch5 目的・目標設定","Ch6 ユーザーインタビュー","Ch7 ペルソナ設定","Ch8 カスタマージャーニー","Ch9 USP設計","Ch10 コンセプト","Ch11 LP企画","Ch12 企画・提案資料","Ch13 【提出課題】LP企画資料"]},
+{name:"Lesson7 Figma完全ガイド",chapters:["Ch1 概要・ゴール","Ch2 Figmaの概要","Ch3 基本操作","Ch4 レイヤーとコンポーネント","Ch5 プラグインとUIキット","Ch6 ショートカット","Ch7 Figma AI","Ch8 Dev Mode","Ch9 【提出課題】プロトタイプ"]},
+{name:"Lesson8 ワイヤーフレーム",chapters:["Ch1 概要・ゴール","Ch2 情報設計","Ch3 ワイヤーフレームの基礎","Ch4 Figmaでワイヤーフレーム","Ch5 Figma Make","Ch6 評価と改善","Ch7 【提出課題】LPワイヤーフレーム"]},
+{name:"Lesson9-14 (公開予定)",chapters:["デザインカンプ","コーディング基礎","デザイン→コード","Webサイト公開","最終課題","案件獲得・転職準備"]}]},
+{name:"生成AI動画クリエイターコース",contents:134,lessons:[
+{name:"Lesson0 事前準備",chapters:["Ch1 learning BOXについて","Ch2 zipファイルの展開方法","Ch3 課題提出・AIチューターの使い方","Ch4 学習の進め方","Ch5 ショートカットキー"]},
+{name:"Lesson1-3 動画編集の基礎",chapters:["L1 生成AI×動画編集の全体像","L2 動画編集の概要","L3 Adobe Premiere準備"]},
+{name:"Lesson4 動画編集入門",chapters:["Ch1 概要・ゴール","Ch2 編集画面の見方","Ch3 素材読み込みとシーケンス","Ch4 タイムライン","Ch5 カット編集","Ch6 テロップ作成","Ch7 テロップデザイン","Ch8 エフェクト・トランジション","Ch9 BGM・SEの挿入","Ch10 動画書き出し","Ch11 ショートカットキー","Ch12 【提出課題】簡単な動画編集"]},
+{name:"Lesson5 動画編集基本",chapters:["Ch1 概要・ゴール","Ch2 編集の準備","Ch3 音声調整","Ch4 ジェットカット編集","Ch5 マルチカメラ","Ch6 ベーステロップ","Ch7 板テロップ","Ch8 アニメーション","Ch9 モーショングラフィック","Ch10 BGM/SE調整","Ch11 色調補正","Ch12 最終チェック","Ch13 【提出課題】ロケ動画編集"]},
+{name:"Lesson6 動画編集応用",chapters:["Ch1 概要・ゴール","Ch2 番組風YouTube動画","Ch3 音声・色調の応用","Ch4 テロップ応用","Ch5 Bロール活用","Ch6 ワイプ作成","Ch7 サイドテロップ","Ch8 BGM/SE応用","Ch9 ハイライト","Ch10 サムネイル","Ch11 【提出課題】番組風ロケ動画"]},
+{name:"Lesson7 切り抜き動画",chapters:["Ch1 概要・ゴール","Ch2 切り抜き動画とは","Ch3 切り抜き箇所の選定","Ch4 カット編集","Ch5 テロップ作成","Ch6 縦型動画","Ch7 収益化","Ch8 【提出課題】切り抜き動画"]},
+{name:"Lesson8-9 生成AI基礎とPE",chapters:["L8 生成AIの基礎知識","L9 プロンプトエンジニアリング"]},
+{name:"Lesson10-12 生成AIで動画制作",chapters:["L10 企画/構成/台本制作","L11 画像生成","L12 動画生成の基本"]},
+{name:"Lesson13-16 実践編",chapters:["L13 実践①リール動画","L14 実践②Web広告動画","L15 実践③アニメ風ショートムービー","L16 実践④イラストMV"]},
+{name:"Lesson17-19 (公開予定)",chapters:["YouTubeチャンネル運用","動画案件の獲得","【自由課題】オリジナル動画"]}]}
+];
+const sel=document.getElementById('courseFilter');courses.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.name;sel.appendChild(o)});
+function toggleBody(el){el.nextElementSibling.classList.toggle('open');el.classList.toggle('collapsed')}
+function toggle(cb,key){localStorage.setItem(key,cb.checked?'1':'0');if(cb.checked&&!localStorage.getItem(key+'_date')){const today=new Date().toISOString().split('T')[0];const d=cb.parentElement.querySelector('.ch-date');if(d){d.value=today;localStorage.setItem(key+'_date',today)}}updateSummary()}
+function setDate(input,key){localStorage.setItem(key,input.value)}
+function updateSummary(){let t=0,d=0;const f=document.getElementById('courseFilter').value;const list=f==='all'?courses:[courses[parseInt(f)]];list.forEach((c,ci)=>{const idx=f==='all'?ci:parseInt(f);c.lessons.forEach((l,li)=>{let ld=0;l.chapters.forEach((ch,chi)=>{t++;const k='c'+idx+'l'+li+'ch'+chi;if(localStorage.getItem(k)==='1'){d++;ld++}});const lp=document.getElementById('lp_'+idx+'_'+li);if(lp)lp.textContent=ld+'/'+l.chapters.length+' 完了'})});const p=t>0?Math.round(d/t*100):0;const cd=list.filter((c,ci)=>{const idx=f==='all'?ci:parseInt(f);return c.lessons.every((l,li)=>l.chapters.every((ch,chi)=>localStorage.getItem('c'+idx+'l'+li+'ch'+chi)==='1'))}).length;const col=p<25?'#ef4444':p<50?'#f59e0b':p<75?'#3b82f6':'#10b981';document.getElementById('summaryArea').innerHTML='<div class="summary-card"><div class="num">'+p+'%</div><div class="label">全体進捗率</div><div class="pbar-bg"><div class="pbar-fill" style="width:'+p+'%;background:'+col+'"></div></div></div><div class="summary-card"><div class="num">'+d+'/'+t+'</div><div class="label">完了チャプター数</div></div><div class="summary-card"><div class="num">'+cd+'/'+list.length+'</div><div class="label">完了コース数</div></div><div class="summary-card"><div class="num">'+list.length+'</div><div class="label">受講コース数</div></div>'}
+function render(fi){const a=document.getElementById('courseArea');a.innerHTML='';const list=fi==='all'?courses:[courses[parseInt(fi)]];list.forEach((c,ci)=>{const s=document.createElement('div');s.className='course-section';const idx=fi==='all'?ci:parseInt(fi);let lh='';c.lessons.forEach((l,li)=>{let ch='';l.chapters.forEach((c2,chi)=>{const k='c'+idx+'l'+li+'ch'+chi;const ck=localStorage.getItem(k)==='1'?'checked':'';const dv=localStorage.getItem(k+'_date')||'';ch+='<div class="ch-row"><input type="checkbox" '+ck+' onchange="toggle(this,\''+k+'\')"><span class="ch-name">'+c2+'</span><input type="date" class="ch-date" value="'+dv+'" onchange="setDate(this,\''+k+'_date\')"></div>'});lh+='<div class="lesson-group"><div class="lesson-title"><span>'+l.name+'</span><span class="lesson-progress" id="lp_'+idx+'_'+li+'"></span></div>'+ch+'</div>'});s.innerHTML='<div class="course-header" onclick="toggleBody(this)"><h3>'+c.name+' <span class="badge">'+c.contents+'コンテンツ</span></h3><span class="arrow">▼</span></div><div class="course-body">'+lh+'</div>';a.appendChild(s)});updateSummary()}
+function resetAll(){if(!confirm('全ての進捗データをリセットしますか？'))return;Object.keys(localStorage).forEach(k=>{if(k.startsWith('c'))localStorage.removeItem(k)});render(document.getElementById('courseFilter').value)}
+function saveData(){const d={staff:document.getElementById('staffName').value,dept:document.getElementById('dept').value,startDate:document.getElementById('startDate').value,progress:{}};Object.keys(localStorage).forEach(k=>{if(k.startsWith('c'))d.progress[k]=localStorage.getItem(k)});const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(d.staff||'staff')+'_progress_'+new Date().toISOString().split('T')[0]+'.json';a.click()}
+function loadData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const r=new FileReader();r.onload=ev=>{const d=JSON.parse(ev.target.result);document.getElementById('staffName').value=d.staff||'';document.getElementById('dept').value=d.dept||'';document.getElementById('startDate').value=d.startDate||'';Object.keys(d.progress).forEach(k=>localStorage.setItem(k,d.progress[k]));render(document.getElementById('courseFilter').value)};r.readAsText(e.target.files[0])};i.click()}
+function exportCSV(){let csv='\uFEFF"コース","レッスン","チャプター","完了","完了日"\n';const f=document.getElementById('courseFilter').value;const list=f==='all'?courses:[courses[parseInt(f)]];list.forEach((c,ci)=>{const idx=f==='all'?ci:parseInt(f);c.lessons.forEach((l,li)=>{l.chapters.forEach((ch,chi)=>{const k='c'+idx+'l'+li+'ch'+chi;const dn=localStorage.getItem(k)==='1'?'✓':'';const dt=localStorage.getItem(k+'_date')||'';csv+='"'+c.name+'","'+l.name+'","'+ch+'","'+dn+'","'+dt+'"\n'})})});const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='learning_progress_'+new Date().toISOString().split('T')[0]+'.csv';a.click()}
+document.getElementById('courseFilter').addEventListener('change',function(){render(this.value)});
+render('all');
+<\/script>
+</body></html>
