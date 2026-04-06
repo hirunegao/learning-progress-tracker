@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スタッフ学習進捗一覧 - DMM生成AI CAMP</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;background:#f0f4f8;color:#333;padding:20px}
+.container{max-width:1400px;margin:0 auto}
+h1{text-align:center;color:#1a56db;margin-bottom:5px;font-size:26px}
+.subtitle{text-align:center;color:#666;margin-bottom:20px;font-size:13px}
+.nav{text-align:center;margin-bottom:20px}
+.nav a{color:#1a56db;text-decoration:none;font-weight:600;font-size:14px;padding:8px 16px;border:2px solid #1a56db;border-radius:8px;transition:.2s}
+.nav a:hover{background:#1a56db;color:#fff}
+.toolbar{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;cursor:pointer;font-weight:600;transition:.2s}
+.btn-primary{background:#1a56db}.btn-primary:hover{background:#1544b0}
+.btn-export{background:#059669}.btn-export:hover{background:#047857}
+.btn-danger{background:#dc2626}.btn-danger:hover{background:#b91c1c}
+.btn-print{background:#7c3aed}.btn-print:hover{background:#6d28d9}
+.btn-save{background:#e67e22}.btn-save:hover{background:#d35400}
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.summary-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:16px;text-align:center}
+.summary-card .num{font-size:28px;font-weight:700;color:#1a56db}
+.summary-card .label{font-size:11px;color:#888;margin-top:4px}
+.table-wrap{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow-x:auto;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff}
+th{padding:12px 10px;text-align:center;font-weight:600;white-space:nowrap}
+th:first-child,th:nth-child(2){text-align:left}
+td{padding:10px;border-bottom:1px solid #f0f0f0;text-align:center}
+td:first-child,td:nth-child(2){text-align:left;font-weight:600}
+tr:hover{background:#f0f7ff}
+.pbar-bg{background:#e5e7eb;border-radius:999px;height:8px;overflow:hidden;width:100%;min-width:60px}
+.pbar-fill{height:100%;border-radius:999px;transition:width .5s ease}
+.pct{font-weight:700;font-size:14px}
+.pct-high{color:#059669}
+.pct-mid{color:#f59e0b}
+.pct-low{color:#ef4444}
+.empty-state{text-align:center;padding:60px 20px;color:#999}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:15px;margin-bottom:8px}
+.staff-count{font-size:14px;color:#666;margin-left:auto}
+.detail-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.detail-modal.show{display:flex}
+.detail-content{background:#fff;border-radius:16px;padding:30px;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
+.detail-close{position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#666;background:none;border:none}
+.detail-close:hover{color:#333}
+.detail-name{font-size:20px;font-weight:700;color:#1a56db;margin-bottom:4px}
+.detail-dept{font-size:13px;color:#888;margin-bottom:16px}
+.detail-courses{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dc-item{background:#f8fafc;border-radius:8px;padding:12px}
+.dc-name{font-size:12px;font-weight:600;color:#333;margin-bottom:6px}
+.dc-pct{font-size:18px;font-weight:700}
+@media print{.toolbar,.nav{display:none!important}body{padding:0}}
+@media(max-width:768px){.detail-courses{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📊 スタッフ学習進捗一覧</h1>
+<p class="subtitle">DMM 生成AI CAMP — learningBOX 全8コース対応</p>
+<div class="nav"><a href="index.html">📋 個別進捗票へ</a></div>
+<div class="toolbar">
+<button class="btn btn-primary" onclick="loadFiles()">📂 進捗データ読込（複数選択可）</button>
+<button class="btn btn-export" onclick="exportListCSV()">📊 一覧CSV出力</button>
+<button class="btn btn-print" onclick="window.print()">🖨 印刷</button>
+<button class="btn btn-save" onclick="saveSession()">💾 一覧を保存</button>
+<button class="btn btn-primary" onclick="loadSession()">📂 一覧を読込</button>
+<button class="btn btn-danger" onclick="clearAll()">🗑 全クリア</button>
+<span class="staff-count" id="staffCount"></span>
+</div>
+<div class="summary-row" id="summaryRow"></div>
+<div class="table-wrap">
+<div id="tableArea"></div>
+</div>
+</div>
+<div class="detail-modal" id="detailModal">
+<div class="detail-content">
+<button class="detail-close" onclick="closeDetail()">&times;</button>
+<div id="detailBody"></div>
+</div>
+</div>
+<script>
+var courseNames=["PE-基礎マスターコース","PE-マーケティングコース","PE-営業コース","PE-人事コース","生成AIエンジニアコース","Difyマスターコース","生成AIデザインコース","生成AI動画クリエイターコース"];
+var courseShort=["基礎","マーケ","営業","人事","AIエンジ","Dify","AIデザ","AI動画"];
+var courseLessons=[
+[["Lesson0 事前準備",6],["Lesson1 プロンプトエンジニアリング基礎",6],["Lesson2 プロンプトエンジニアリング応用",6],["Lesson3 ビジネス活用",6],["Lesson4 実践プロジェクト",6],["Lesson5 総合演習",5]],
+[["Lesson0 事前準備",3],["Lesson1 マーケティング基礎×AI",6],["Lesson2 コンテンツマーケティング",6],["Lesson3 広告・プロモーション",6],["Lesson4 データドリブンマーケティング",6],["Lesson5 実践プロジェクト",6]],
+[["Lesson0 事前準備",3],["Lesson1 営業基礎×AI",5],["Lesson2 提案・プレゼン",5],["Lesson3 商談・クロージング",5],["Lesson4 顧客管理・フォロー",5],["Lesson5 実践プロジェクト",3]],
+[["Lesson0 事前準備",3],["Lesson1 採用業務×AI",6],["Lesson2 人材育成×AI",6],["Lesson3 労務管理×AI",6],["Lesson4 組織開発×AI",6],["Lesson5 実践プロジェクト",3]],
+[["Lesson0 事前準備",4],["Lesson1 LLM基礎",7],["Lesson2 RAG構築",7],["Lesson3 LangChain",7],["Lesson4 ファインチューニング",7],["Lesson5 マルチモーダル",5],["Lesson6 AI Webアプリ開発",6],["Lesson7 セキュリティ・倫理",5],["Lesson8 総合プロジェクト",6],["追加教材",76]],
+[["Lesson0 事前準備",3],["Lesson1 チャットボット構築",6],["Lesson2 ワークフロー",6],["Lesson3 ナレッジベース",6],["Lesson4 エージェント",5],["Lesson5 API公開・運用",5],["Lesson6 実践プロジェクト",5],["追加教材",105]],
+[["Lesson0 事前準備",3],["Lesson1 画像生成基礎",6],["Lesson2 画像編集・加工",6],["Lesson3 デザインワークフロー",6],["Lesson4 商用利用・権利",4],["Lesson5 実践プロジェクト",5],["追加教材",17]],
+[["Lesson0 事前準備",3],["Lesson1 AI動画生成基礎",6],["Lesson2 動画編集×AI",6],["Lesson3 ナレーション・音声",5],["Lesson4 企画・構成",5],["Lesson5 配信・マーケティング",5],["Lesson6 実践プロジェクト",5],["追加教材",78]]
+];
+var courseTotals=courseLessons.map(function(ls){return ls.reduce(function(s,l){return s+l[1];},0);});
+
+var staffList=[];
+
+function calcProgress(st){
+  var result=[];var totalAll=0,doneAll=0;
+  for(var ci=0;ci<courseNames.length;ci++){
+    var total=courseTotals[ci],done=0;
+    var lessons=courseLessons[ci];
+    var li=0;
+    for(var lx=0;lx<lessons.length;lx++){
+      for(var chi=0;chi<lessons[lx][1];chi++){
+        var k=ci+'_'+lx+'_'+chi;
+        if(st[k]&&st[k].done)done++;
+      }
+    }
+    totalAll+=total;doneAll+=done;
+    result.push({name:courseNames[ci],short:courseShort[ci],done:done,total:total,pct:total>0?Math.round(done/total*100):0});
+  }
+  return{courses:result,totalAll:totalAll,doneAll:doneAll,pctAll:totalAll>0?Math.round(doneAll/totalAll*100):0};
+}
+
+function loadFiles(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.multiple=true;
+  inp.onchange=function(e){
+    var files=Array.from(e.target.files);
+    var loaded=0;
+    files.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(ev){
+        try{
+          var d=JSON.parse(ev.target.result);
+          if(d.state){
+            var exists=staffList.findIndex(function(s){return s.staff===d.staff&&s.dept===d.dept;});
+            if(exists>=0){staffList[exists]=d;}else{staffList.push(d);}
+          }
+        }catch(err){console.error('Parse error:',err);}
+        loaded++;
+        if(loaded===files.length){renderDashboard();alert(files.length+'件のデータを読み込みました');}
+      };
+      r.readAsText(f);
+    });
+  };
+  inp.click();
+}
+
+function clearAll(){
+  if(!confirm('全てのスタッフデータをクリアしますか？'))return;
+  staffList=[];renderDashboard();
+}
+
+function renderDashboard(){
+  document.getElementById('staffCount').textContent=staffList.length>0?staffList.length+'名のスタッフ':'';
+  if(staffList.length===0){
+    document.getElementById('summaryRow').innerHTML='';
+    document.getElementById('tableArea').innerHTML='<div class="empty-state"><div class="icon">📂</div><p>スタッフの進捗データを読み込んでください</p><p style="font-size:12px;color:#aaa">個別進捗票の「💾 保存」で出力したJSONファイルを<br>「📂 進捗データ読込」ボタンから複数選択できます</p></div>';
+    return;
+  }
+  var allStats=staffList.map(function(s){return{staff:s.staff||'不明',dept:s.dept||'',startDate:s.startDate||'',prog:calcProgress(s.state||{})};});
+  var avgPct=Math.round(allStats.reduce(function(s,a){return s+a.prog.pctAll;},0)/allStats.length);
+  var completedCount=allStats.filter(function(a){return a.prog.pctAll===100;}).length;
+  var avgByCourse=courseNames.map(function(cn,ci){
+    var sum=allStats.reduce(function(s,a){return s+a.prog.courses[ci].pct;},0);
+    return Math.round(sum/allStats.length);
+  });
+
+  var sh='<div class="summary-card"><div class="num">'+allStats.length+'<'+'/div><div class="label">登録スタッフ数<'+'/div><'+'/div>';
+  sh+='<div class="summary-card"><div class="num">'+avgPct+'%<'+'/div><div class="label">平均進捗率<'+'/div><div class="pbar-bg"><div class="pbar-fill" style="width:'+avgPct+'%;background:linear-gradient(90deg,#1a56db,#3b82f6)"><'+'/div><'+'/div><'+'/div>';
+  sh+='<div class="summary-card"><div class="num" style="color:#059669">'+completedCount+'<'+'/div><div class="label">全コース修了者<'+'/div><'+'/div>';
+  document.getElementById('summaryRow').innerHTML=sh;
+
+  var th='<table><thead><tr><th>氏名<'+'/th><th>部署<'+'/th><th>全体<'+'/th>';
+  courseShort.forEach(function(cs){th+='<th>'+cs+'<'+'/th>';});
+  th+='<th>開始日<'+'/th><th>操作<'+'/th><'+'/tr><'+'/thead><tbody>';
+  allStats.forEach(function(a,i){
+    var pc=a.prog.pctAll;
+    var cls=pc>=80?'pct-high':pc>=40?'pct-mid':'pct-low';
+    th+='<tr><td>'+a.staff+'<'+'/td><td>'+a.dept+'<'+'/td>';
+    th+='<td><span class="pct '+cls+'">'+pc+'%<'+'/span><div class="pbar-bg"><div class="pbar-fill" style="width:'+pc+'%;background:'+(pc>=80?'#059669':pc>=40?'#f59e0b':'#ef4444')+'"><'+'/div><'+'/div><'+'/td>';
+    a.prog.courses.forEach(function(c){
+      var ccls=c.pct>=80?'pct-high':c.pct>=40?'pct-mid':'pct-low';
+      th+='<td><span class="pct '+ccls+'">'+c.pct+'%<'+'/span><'+'/td>';
+    });
+    th+='<td style="font-size:11px">'+a.startDate+'<'+'/td>';
+    th+='<td><button class="btn btn-primary" style="padding:4px 10px;font-size:11px" onclick="showDetail('+i+')">詳細<'+'/button> <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="removeStaff('+i+')">削除<'+'/button><'+'/td>';
+    th+='<'+'/tr>';
+  });
+  th+='<'+'/tbody><'+'/table>';
+  document.getElementById('tableArea').innerHTML=th;
+}
+
+function showDetail(idx){
+  var s=staffList[idx];
+  var prog=calcProgress(s.state||{});
+  var h='<div class="detail-name">'+s.staff+'<'+'/div><div class="detail-dept">'+(s.dept||'部署未設定')+' | 開始日: '+(s.startDate||'未設定')+' | 全体進捗: '+prog.pctAll+'%<'+'/div>';
+  h+='<div class="detail-courses">';
+  prog.courses.forEach(function(c,ci){
+    var col=c.pct>=80?'#059669':c.pct>=40?'#f59e0b':'#ef4444';
+    h+='<div class="dc-item"><div class="dc-name">'+c.name+'<'+'/div><div class="dc-pct" style="color:'+col+'">'+c.pct+'% <span style="font-size:12px;color:#888;font-weight:400">'+c.done+'/'+c.total+'<'+'/span><'+'/div><div class="pbar-bg" style="margin-top:6px"><div class="pbar-fill" style="width:'+c.pct+'%;background:'+col+'"><'+'/div><'+'/div><'+'/div>';
+  });
+  h+='<'+'/div>';
+  document.getElementById('detailBody').innerHTML=h;
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetail(){document.getElementById('detailModal').classList.remove('show');}
+document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeDetail();});
+
+function removeStaff(idx){
+  if(!confirm(staffList[idx].staff+'のデータを削除しますか？'))return;
+  staffList.splice(idx,1);renderDashboard();
+}
+
+function exportListCSV(){
+  if(staffList.length===0){alert('データがありません');return;}
+  var rows=[['氏名','部署','開始日','全体進捗(%)'].concat(courseNames.map(function(n){return n+'(%)';}))];
+  staffList.forEach(function(s){
+    var prog=calcProgress(s.state||{});
+    var row=[s.staff||'',s.dept||'',s.startDate||'',prog.pctAll];
+    prog.courses.forEach(function(c){row.push(c.pct);});
+    rows.push(row);
+  });
+  var bom='\uFEFF';
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var b=new Blob([bom+csv],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='staff_progress_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+}
+
+function saveSession(){
+  if(staffList.length===0){alert('データがありません');return;}
+  var b=new Blob([JSON.stringify(staffList,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='dashboard_data_'+new Date().toISOString().split('T')[0]+'.json';a.click();
+}
+
+function loadSession(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=function(e){
+    var r=new FileReader();
+    r.onload=function(ev){
+      try{
+        var d=JSON.parse(ev.target.result);
+        if(Array.isArray(d)){staffList=d;renderDashboard();alert(d.length+'名のデータを読み込みました');}
+        else{alert('一覧データではありません。個別のJSONは「進捗データ読込」を使ってください。');}
+      }catch(err){alert('読み込みエラー: '+err.message);}
+    };
+    r.readAsText(e.target.files[0]);
+  };
+  inp.click();
+}
+
+renderDashboard();
+</script>
+</body></html>
